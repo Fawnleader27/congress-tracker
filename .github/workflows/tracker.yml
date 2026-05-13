@@ -1,0 +1,41 @@
+name: Congressional Trade Tracker
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # runs every hour
+  workflow_dispatch:       # lets you run it manually too
+
+jobs:
+  track:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests beautifulsoup4 lxml pandas
+
+      - name: Run tracker
+        env:
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PWD: ${{ secrets.GMAIL_APP_PWD }}
+        run: python tracker.py
+
+      - name: Save known IDs
+        uses: actions/upload-artifact@v4
+        with:
+          name: known-ids
+          path: known_ids.txt
+          if-no-files-found: ignore
+
+      - name: Restore known IDs
+        uses: actions/download-artifact@v4
+        with:
+          name: known-ids
+        continue-on-error: true
