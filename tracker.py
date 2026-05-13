@@ -261,16 +261,16 @@ def get_trade_id(row):
 def main():
     print(f"🏛️  Congressional Trade Tracker — {datetime.now().strftime('%Y-%m-%d %H:%M')}")
 
-    # Load known trade IDs from file (persists between runs on GitHub)
+  # Load known trade IDs from file
     known_ids_file = "known_ids.txt"
     if os.path.exists(known_ids_file):
         with open(known_ids_file) as f:
-            known_ids = set(f.read().splitlines())
+            known_ids = set(line.strip() for line in f if line.strip())
         print(f"✅ Loaded {len(known_ids)} known trade IDs")
     else:
         known_ids = set()
-        print("⚠️  No known IDs file — first run")
-
+        print("⚠️  No known IDs file — treating all trades as new on first run")
+        
     # Scrape latest trades
     print("🌐 Scraping Capitol Trades …")
     df = scrape_latest_trades(max_pages=3)
@@ -297,11 +297,11 @@ def main():
             subject=f"🏛️ {len(new_trades)} New Congressional Trade(s) Filed",
             body=format_email(new_trades, df)
         )
-        # Save updated known IDs
+      # Save updated known IDs back to file
         all_ids = known_ids | new_ids
         with open(known_ids_file, "w") as f:
-            f.write("\n".join(all_ids))
-        print(f"💾 Saved {len(all_ids)} known IDs")
+            f.write("\n".join(sorted(all_ids)) + "\n")
+        print(f"💾 Saved {len(all_ids)} known IDs → known_ids.txt")
     else:
         print("✅ No new trades — no email sent")
 
