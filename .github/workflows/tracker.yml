@@ -2,8 +2,8 @@ name: Congressional Trade Tracker
 
 on:
   schedule:
-    - cron: '0 * * * *'  # runs every hour
-  workflow_dispatch:       # lets you run it manually too
+    - cron: '0 * * * *'
+  workflow_dispatch:
 
 jobs:
   track:
@@ -27,15 +27,10 @@ jobs:
           GMAIL_APP_PWD: ${{ secrets.GMAIL_APP_PWD }}
         run: python tracker.py
 
-      - name: Save known IDs
-        uses: actions/upload-artifact@v4
-        with:
-          name: known-ids
-          path: known_ids.txt
-          if-no-files-found: ignore
-
-      - name: Restore known IDs
-        uses: actions/download-artifact@v4
-        with:
-          name: known-ids
-        continue-on-error: true
+      - name: Commit known IDs
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add known_ids.txt
+          git diff --staged --quiet || git commit -m "Update known trade IDs"
+          git push
