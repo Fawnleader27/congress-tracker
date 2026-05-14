@@ -255,9 +255,19 @@ def format_email(new_trades, all_trades):
 
 # ── Main ──────────────────────────────────────────────
 def get_trade_id(row):
-    key = f"{row.get('politician','')}{row.get('date','')}{row.get('ticker','')}{row.get('transaction','')}"
+    # Normalise date to just YYYY-MM-DD to avoid format differences
+    date = row.get('date', '')
+    try:
+        date = pd.to_datetime(str(date)).strftime('%Y-%m-%d')
+    except:
+        date = str(date)[:10]
+    # Strip whitespace from all fields
+    politician  = str(row.get('politician',  '')).strip().lower()
+    ticker      = str(row.get('ticker',      '')).strip().upper()
+    transaction = str(row.get('transaction', '')).strip().lower()
+    key = f"{politician}|{date}|{ticker}|{transaction}"
     return hashlib.md5(key.encode()).hexdigest()
-
+    
 def main():
     print(f"🏛️  Congressional Trade Tracker — {datetime.now().strftime('%Y-%m-%d %H:%M')}")
 
