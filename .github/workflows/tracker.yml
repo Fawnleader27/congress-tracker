@@ -5,6 +5,11 @@ on:
     - cron: '0 * * * *'
   workflow_dispatch:
 
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
 jobs:
   track:
     runs-on: ubuntu-latest
@@ -19,18 +24,44 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install requests beautifulsoup4 lxml pandas
+        run: pip install requests beautifulsoup4 lxml pandas yfinance
 
       - name: Run tracker
         env:
           GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
           GMAIL_APP_PWD: ${{ secrets.GMAIL_APP_PWD }}
+          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
         run: python tracker.py
 
-      - name: Commit known IDs
+      - name: Commit portfolio and webpage
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git add known_ids.txt
-          git diff --staged --quiet || git commit -m "Update known trade IDs"
+          git add portfolio.json index.html known_ids.txt
+          git diff --staged --quiet || git commit -m "Update portfolio and webpage"
           git push
+
+  deploy:
+    needs: track
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
