@@ -78,7 +78,10 @@ def paper_buy(portfolio, trade):
         print(f"  ⚠️  Could not get price for {ticker} — skipping paper trade")
         return portfolio, None
 
-    shares = round(amount / price, 4)
+    if not amount or not price or pd.isna(amount) or pd.isna(price):
+        print(f"  ⚠️  Invalid amount or price for {ticker} — skipping")
+        return portfolio, None
+    shares = round(float(amount) / float(price), 4)
     key    = f"{ticker}_{politician}_{datetime.now().strftime('%Y%m%d')}"
 
     position = {
@@ -399,11 +402,16 @@ def get_trade_id(row):
     try:
         date = pd.to_datetime(str(row.get("date",""))).strftime("%Y-%m-%d")
     except:
-        date = str(row.get("date",""))[:10]
-    key = f"{str(row.get('politician','')).strip().lower()}|{date}|{str(row.get('ticker','')).strip().upper()}|{str(row.get('transaction','')).strip().lower()}"
-    return hashlib.md5(key.encode()).hexdigest()
-
-
+        date = "unknown"
+    try:
+        politician  = str(row.get("politician",  "")).strip().lower()
+        ticker      = str(row.get("ticker",      "")).strip().upper()
+        transaction = str(row.get("transaction", "")).strip().lower()
+        key = f"{politician}|{date}|{ticker}|{transaction}"
+        return hashlib.md5(key.encode()).hexdigest()
+    except:
+        return hashlib.md5(str(row).encode()).hexdigest()
+        
 # ── Main ──────────────────────────────────────────────
 def main():
     print(f"🏛️  Congressional Trade Tracker — {datetime.now().strftime('%Y-%m-%d %H:%M')}")
@@ -441,19 +449,21 @@ def main():
     new_positions = []
     if new_trades:
         for trade in new_trades:
-            tx = str(trade.get("transaction","")).lower()
-            if "purchase" in tx or "buy" in tx:
-                portfolio, pos = paper_buy(portfolio, trade)
-                if pos:
-                    new_positions.append(("buy", pos))
-            elif "sale" in tx or "sell" in tx:
-                portfolio, closed = paper_sell(portfolio, trade)
-                if closed:
-                    for c in (closed if isinstance(closed, list) else [closed]):
-                        new_positions.append(("sell", c))
-
-        save_portfolio(portfolio)
-
+            try:
+                tx = str(trade.get("transaction","")).lower()
+                if "purchase" in tx or "buy" in tx:
+                    portfolio, pos = paper_buy(portfolio, trade)
+                    if pos:
+                        new_positions.append(("buy", pos))
+                elif "sale" in tx or "sell" in tx:
+                    portfolio, closed = paper_sell(portfolio, trade)
+                    if closed:
+                        for c in (closed if isinstance(closed, list) else [closed]):
+                            new_positions.append(("sell", c))
+            except Exception as e:
+                print(f"  ⚠️  Skipping trade due to error: {e}")
+                continue
+                
         # Send alert email
         summary = portfolio_summary(portfolio)
         send_email(
