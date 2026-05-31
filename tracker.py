@@ -335,7 +335,11 @@ def format_email(new_trades, all_trades, portfolio_snap):
             bg    = "#f0fff4" if highlight else "white"
             badge = "⭐ COPY THIS" if highlight else ""
             color = "#1565C0" if "dem" in str(t.get("party","")).lower() else "#B71C1C"
-            score = int(t.get("score", 0)) if "score" in t else "-"
+            try:
+    score_val = t.get("score", None)
+    score = int(score_val) if score_val is not None and str(score_val) != "nan" else "-"
+except:
+    score = "-"
             rows += f"""<tr style="background:{bg}">
                 <td style="padding:8px;border-bottom:1px solid #eee;">
                     <strong style="color:{color}">{t.get('politician','')}</strong>
