@@ -329,17 +329,17 @@ def format_email(new_trades, all_trades, portfolio_snap):
     # Also include sales in others view
     sales = new_df[new_df["transaction"] == "Sale"] if not new_df.empty else pd.DataFrame()
 
-    def make_rows(subset, highlight=False):
+def make_rows(subset, highlight=False):
         rows = ""
         for _, t in subset.iterrows():
-            bg    = "#f0fff4" if highlight else "white"
+            bg = "#f0fff4" if highlight else "white"
             badge = "⭐ COPY THIS" if highlight else ""
-            color = "#1565C0" if "dem" in str(t.get("party","")).lower() else "#B71C1C"
-           try:
-    score_val = t.get("score", None)
-    score = int(score_val) if score_val is not None and str(score_val) != "nan" else "-"
-except Exception:
-    score = "-"
+            color = "#1565C0" if "dem" in str(t.get("party", "")).lower() else "#B71C1C"
+            try:
+                score_val = t.get("score", None)
+                score = int(score_val) if score_val is not None and str(score_val) != "nan" else "-"
+            except Exception:
+                score = "-"
             rows += f"""<tr style="background:{bg}">
                 <td style="padding:8px;border-bottom:1px solid #eee;">
                     <strong style="color:{color}">{t.get('politician','')}</strong>
