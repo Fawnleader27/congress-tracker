@@ -51,9 +51,22 @@
       "buy_date": "2026-06-01",
       "range": "1K\u201315K",
       "status": "open"
+    },
+    "AAPL_Ed Case_20260601": {
+      "key": "AAPL_Ed Case_20260601",
+      "ticker": "AAPL",
+      "politician": "Ed Case",
+      "party": "Democrat",
+      "action": "Purchase",
+      "shares": 25.9951,
+      "buy_price": 307.75,
+      "amount": 8000,
+      "buy_date": "2026-06-01",
+      "range": "1K\u201315K",
+      "status": "open"
     }
   },
   "closed_trades": [],
-  "total_invested": 64000,
-  "last_updated": "2026-06-01 00:01 UTC"
+  "total_invested": 72000,
+  "last_updated": "2026-06-01 19:24 UTC"
 }
