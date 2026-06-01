@@ -68,21 +68,23 @@ def get_price(ticker):
     return None
 
 def paper_buy(portfolio, trade):
-    ticker      = trade.get("ticker", "")
-    politician  = trade.get("politician", "")
-    size_label  = trade.get("range", "")
-    amount      = TRADE_SIZE_MAP.get(size_label, 32_500)
-    price       = get_price(ticker)
+    ticker     = trade.get("ticker", "")
+    politician = trade.get("politician", "")
+    size_label = trade.get("range", "")
+    amount     = TRADE_SIZE_MAP.get(size_label, 32_500)
+    price      = get_price(ticker)
 
     if not price or price <= 0:
         print(f"  ⚠️  Could not get price for {ticker} — skipping paper trade")
         return portfolio, None
 
-    if not amount or not price or pd.isna(amount) or pd.isna(price):
-        print(f"  ⚠️  Invalid amount or price for {ticker} — skipping")
+    try:
+        shares = round(float(amount) / float(price), 4)
+    except Exception as e:
+        print(f"  ⚠️  Could not calculate shares for {ticker}: {e}")
         return portfolio, None
-    shares = round(float(amount) / float(price), 4)
-    key    = f"{ticker}_{politician}_{datetime.now().strftime('%Y%m%d')}"
+
+    key = f"{ticker}_{politician}_{datetime.now().strftime('%Y%m%d')}"
 
     position = {
         "key":        key,
@@ -112,7 +114,6 @@ def paper_sell(portfolio, trade):
         print(f"  ⚠️  Could not get price for {ticker} — skipping paper sell")
         return portfolio, None
 
-    # Find open positions for this ticker + politician
     matched = []
     for key, pos in portfolio["positions"].items():
         if pos["ticker"] == ticker and pos["politician"] == politician and pos["status"] == "open":
@@ -124,8 +125,8 @@ def paper_sell(portfolio, trade):
 
     closed = []
     for key, pos in matched:
-        gain       = (price - pos["buy_price"]) / pos["buy_price"] * 100
-        profit     = (price - pos["buy_price"]) * pos["shares"]
+        gain     = (price - pos["buy_price"]) / pos["buy_price"] * 100
+        profit   = (price - pos["buy_price"]) * pos["shares"]
         closed_pos = {**pos,
             "sell_price": price,
             "sell_date":  datetime.now(timezone.utc).strftime("%Y-%m-%d"),
@@ -165,15 +166,17 @@ def scrape_latest_trades(max_pages=3):
                 party = party_el.get_text(strip=True) if party_el else ""
 
                 ticker_el = row.select_one(".issuer-ticker")
-                ticker = ticker_el.get_text(strip=True).replace(":US","").strip() if ticker_el else ""
+                ticker = ticker_el.get_text(strip=True).replace(":US", "").strip() if ticker_el else ""
 
                 asset_el = row.select_one(".issuer-name a")
                 asset = asset_el.get_text(strip=True) if asset_el else ""
 
                 tx_el = row.select_one(".tx-type")
                 transaction = tx_el.get_text(strip=True) if tx_el else ""
-                if "buy" in transaction.lower():    transaction = "Purchase"
-                elif "sell" in transaction.lower(): transaction = "Sale"
+                if "buy" in transaction.lower():
+                    transaction = "Purchase"
+                elif "sell" in transaction.lower():
+                    transaction = "Sale"
 
                 size_el = row.select_one(".trade-size .text-txt-dimmer")
                 size = size_el.get_text(strip=True) if size_el else ""
@@ -248,9 +251,8 @@ def portfolio_summary(portfolio):
     positions = portfolio.get("positions", {})
     closed    = portfolio.get("closed_trades", [])
 
-    # Value open positions at current prices
-    open_value  = 0
-    open_cost   = 0
+    open_value = 0
+    open_cost  = 0
     for pos in positions.values():
         price = get_price(pos["ticker"]) or pos["buy_price"]
         open_value += price * pos["shares"]
@@ -260,21 +262,21 @@ def portfolio_summary(portfolio):
     open_gain    = open_value - open_cost
     win_trades   = [t for t in closed if t.get("gain_pct", 0) > 0]
     win_rate     = len(win_trades) / len(closed) * 100 if closed else 0
-    best  = max(closed, key=lambda x: x.get("gain_pct", 0), default=None)
-    worst = min(closed, key=lambda x: x.get("gain_pct", 0), default=None)
+    best         = max(closed, key=lambda x: x.get("gain_pct", 0), default=None)
+    worst        = min(closed, key=lambda x: x.get("gain_pct", 0), default=None)
 
     return {
-        "open_positions":  len(positions),
-        "closed_trades":   len(closed),
-        "open_cost":       round(open_cost, 2),
-        "open_value":      round(open_value, 2),
-        "open_gain":       round(open_gain, 2),
-        "open_gain_pct":   round(open_gain / open_cost * 100, 2) if open_cost else 0,
-        "total_profit":    round(total_profit, 2),
-        "win_rate":        round(win_rate, 1),
-        "best_trade":      best,
-        "worst_trade":     worst,
-        "last_updated":    portfolio.get("last_updated", ""),
+        "open_positions": len(positions),
+        "closed_trades":  len(closed),
+        "open_cost":      round(open_cost, 2),
+        "open_value":     round(open_value, 2),
+        "open_gain":      round(open_gain, 2),
+        "open_gain_pct":  round(open_gain / open_cost * 100, 2) if open_cost else 0,
+        "total_profit":   round(total_profit, 2),
+        "win_rate":       round(win_rate, 1),
+        "best_trade":     best,
+        "worst_trade":    worst,
+        "last_updated":   portfolio.get("last_updated", ""),
     }
 
 
@@ -298,6 +300,7 @@ def portfolio_email_snippet(summary):
     tp  = summary["total_profit"]
     wr  = summary["win_rate"]
     col = "#2e7d32" if op >= 0 else "#c62828"
+    owner = os.environ.get("GITHUB_REPOSITORY_OWNER", "your-username")
     return f"""
     <div style="margin-top:24px;padding:16px;background:#f9f9f9;border-radius:8px;border-left:4px solid {col}">
         <h3 style="margin:0 0 10px;font-size:14px;color:#333">📊 Paper Portfolio Snapshot</h3>
@@ -314,25 +317,23 @@ def portfolio_email_snippet(summary):
                 <td><strong>{wr:.1f}%</strong></td></tr>
         </table>
         <p style="margin:10px 0 0;font-size:12px;color:#888">
-            Full dashboard → <a href="https://{os.environ.get('GITHUB_REPOSITORY_OWNER','your-username')}.github.io/congress-tracker/">view portfolio</a>
+            Full dashboard → <a href="https://{owner}.github.io/congress-tracker/">view portfolio</a>
         </p>
     </div>"""
 
 def format_email(new_trades, all_trades, portfolio_snap):
     new_df = pd.DataFrame(new_trades)
     new_df["date"] = pd.to_datetime(new_df["date"], errors="coerce")
-    scored  = score_trades(new_df, all_trades)
+    scored = score_trades(new_df, all_trades)
 
     recommended = scored[scored["recommended"] == True] if not scored.empty else pd.DataFrame()
     others      = scored[scored["recommended"] == False] if not scored.empty else pd.DataFrame()
+    sales       = new_df[new_df["transaction"] == "Sale"] if not new_df.empty else pd.DataFrame()
 
-    # Also include sales in others view
-    sales = new_df[new_df["transaction"] == "Sale"] if not new_df.empty else pd.DataFrame()
-
-def make_rows(subset, highlight=False):
+    def make_rows(subset, highlight=False):
         rows = ""
         for _, t in subset.iterrows():
-            bg = "#f0fff4" if highlight else "white"
+            bg    = "#f0fff4" if highlight else "white"
             badge = "⭐ COPY THIS" if highlight else ""
             color = "#1565C0" if "dem" in str(t.get("party", "")).lower() else "#B71C1C"
             try:
@@ -342,16 +343,16 @@ def make_rows(subset, highlight=False):
                 score = "-"
             rows += f"""<tr style="background:{bg}">
                 <td style="padding:8px;border-bottom:1px solid #eee;">
-                    <strong style="color:{color}">{t.get('politician','')}</strong>
-                    <br><span style="font-size:11px;color:#888">{t.get('party','')}</span>
+                    <strong style="color:{color}">{t.get('politician', '')}</strong>
+                    <br><span style="font-size:11px;color:#888">{t.get('party', '')}</span>
                 </td>
                 <td style="padding:8px;border-bottom:1px solid #eee;">
-                    <strong>{t.get('ticker','')}</strong>
-                    <br><span style="font-size:11px;color:#888">{str(t.get('asset_name',''))[:30]}</span>
+                    <strong>{t.get('ticker', '')}</strong>
+                    <br><span style="font-size:11px;color:#888">{str(t.get('asset_name', ''))[:30]}</span>
                 </td>
-                <td style="padding:8px;border-bottom:1px solid #eee;">{t.get('transaction','')}</td>
-                <td style="padding:8px;border-bottom:1px solid #eee;">{t.get('range','')}</td>
-                <td style="padding:8px;border-bottom:1px solid #eee;">{str(t.get('date',''))[:10]}</td>
+                <td style="padding:8px;border-bottom:1px solid #eee;">{t.get('transaction', '')}</td>
+                <td style="padding:8px;border-bottom:1px solid #eee;">{t.get('range', '')}</td>
+                <td style="padding:8px;border-bottom:1px solid #eee;">{str(t.get('date', ''))[:10]}</td>
                 <td style="padding:8px;border-bottom:1px solid #eee;font-weight:bold;color:#2e7d32">{badge}</td>
             </tr>"""
         return rows
@@ -404,7 +405,7 @@ def make_rows(subset, highlight=False):
 # ── Trade ID ──────────────────────────────────────────
 def get_trade_id(row):
     try:
-        date = pd.to_datetime(str(row.get("date",""))).strftime("%Y-%m-%d")
+        date = pd.to_datetime(str(row.get("date", ""))).strftime("%Y-%m-%d")
     except:
         date = "unknown"
     try:
@@ -415,12 +416,12 @@ def get_trade_id(row):
         return hashlib.md5(key.encode()).hexdigest()
     except:
         return hashlib.md5(str(row).encode()).hexdigest()
-        
+
+
 # ── Main ──────────────────────────────────────────────
 def main():
     print(f"🏛️  Congressional Trade Tracker — {datetime.now().strftime('%Y-%m-%d %H:%M')}")
 
-    # Load state
     known_ids = set()
     if os.path.exists(KNOWN_IDS_FILE):
         with open(KNOWN_IDS_FILE) as f:
@@ -430,7 +431,6 @@ def main():
     portfolio = load_portfolio()
     print(f"✅ Portfolio: {len(portfolio['positions'])} open, {len(portfolio['closed_trades'])} closed")
 
-    # Scrape
     print("🌐 Scraping Capitol Trades …")
     df = scrape_latest_trades(max_pages=3)
     if df.empty:
@@ -438,7 +438,6 @@ def main():
         return
     print(f"✅ Fetched {len(df)} trades")
 
-    # Find new trades
     new_trades = []
     new_ids    = set()
     for _, row in df.iterrows():
@@ -449,12 +448,11 @@ def main():
 
     print(f"🔍 {len(new_trades)} new trade(s)")
 
-    # Paper trade all new trades
     new_positions = []
     if new_trades:
         for trade in new_trades:
             try:
-                tx = str(trade.get("transaction","")).lower()
+                tx = str(trade.get("transaction", "")).lower()
                 if "purchase" in tx or "buy" in tx:
                     portfolio, pos = paper_buy(portfolio, trade)
                     if pos:
@@ -467,25 +465,23 @@ def main():
             except Exception as e:
                 print(f"  ⚠️  Skipping trade due to error: {e}")
                 continue
-                
-        # Send alert email
+
+        save_portfolio(portfolio)
+
         summary = portfolio_summary(portfolio)
         send_email(
             subject=f"🏛️ {len(new_trades)} New Congressional Trade(s) Filed",
             body=format_email(new_trades, df, summary)
         )
 
-        # Save known IDs
         all_ids = known_ids | new_ids
         with open(KNOWN_IDS_FILE, "w") as f:
             f.write("\n".join(sorted(all_ids)) + "\n")
         print(f"💾 Saved {len(all_ids)} known IDs")
     else:
-        # Still update portfolio prices and save
         save_portfolio(portfolio)
         print("✅ No new trades — portfolio prices refreshed")
 
-    # Always regenerate the webpage
     generate_webpage(portfolio)
     print("✅ Webpage updated → index.html")
 
@@ -496,25 +492,24 @@ def generate_webpage(portfolio):
     closed    = portfolio.get("closed_trades", [])
     updated   = portfolio.get("last_updated", "")
 
-    # Get current prices for open positions
     open_rows = ""
     total_open_cost  = 0
     total_open_value = 0
     for pos in sorted(positions.values(), key=lambda x: x["buy_date"], reverse=True):
-        price     = get_price(pos["ticker"]) or pos["buy_price"]
-        value     = price * pos["shares"]
-        cost      = pos["buy_price"] * pos["shares"]
-        gain_pct  = (price - pos["buy_price"]) / pos["buy_price"] * 100
-        gain_val  = value - cost
+        price    = get_price(pos["ticker"]) or pos["buy_price"]
+        value    = price * pos["shares"]
+        cost     = pos["buy_price"] * pos["shares"]
+        gain_pct = (price - pos["buy_price"]) / pos["buy_price"] * 100
+        gain_val = value - cost
         total_open_cost  += cost
         total_open_value += value
         color     = "#2e7d32" if gain_pct >= 0 else "#c62828"
-        party_col = "#1565C0" if "dem" in pos.get("party","").lower() else "#B71C1C"
+        party_col = "#1565C0" if "dem" in pos.get("party", "").lower() else "#B71C1C"
         open_rows += f"""<tr>
             <td>{pos['buy_date']}</td>
             <td><strong style="color:{party_col}">{pos['politician']}</strong></td>
             <td><strong>{pos['ticker']}</strong></td>
-            <td>{pos.get('range','')}</td>
+            <td>{pos.get('range', '')}</td>
             <td>${pos['buy_price']:,.2f}</td>
             <td>${price:,.2f}</td>
             <td style="color:{color};font-weight:bold">{gain_pct:+.2f}%</td>
@@ -524,26 +519,25 @@ def generate_webpage(portfolio):
     open_gain     = total_open_value - total_open_cost
     open_gain_pct = open_gain / total_open_cost * 100 if total_open_cost else 0
 
-    # Closed trades
-    closed_rows = ""
+    closed_rows  = ""
     total_profit = 0
-    wins = 0
-    for t in sorted(closed, key=lambda x: x.get("sell_date",""), reverse=True):
+    wins         = 0
+    for t in sorted(closed, key=lambda x: x.get("sell_date", ""), reverse=True):
         total_profit += t.get("profit", 0)
         if t.get("gain_pct", 0) > 0:
             wins += 1
-        color     = "#2e7d32" if t.get("gain_pct",0) >= 0 else "#c62828"
-        party_col = "#1565C0" if "dem" in t.get("party","").lower() else "#B71C1C"
+        color     = "#2e7d32" if t.get("gain_pct", 0) >= 0 else "#c62828"
+        party_col = "#1565C0" if "dem" in t.get("party", "").lower() else "#B71C1C"
         closed_rows += f"""<tr>
-            <td>{t.get('buy_date','')}</td>
-            <td>{t.get('sell_date','')}</td>
-            <td><strong style="color:{party_col}">{t.get('politician','')}</strong></td>
-            <td><strong>{t.get('ticker','')}</strong></td>
-            <td>{t.get('range','')}</td>
-            <td>${t.get('buy_price',0):,.2f}</td>
-            <td>${t.get('sell_price',0):,.2f}</td>
-            <td style="color:{color};font-weight:bold">{t.get('gain_pct',0):+.2f}%</td>
-            <td style="color:{color};font-weight:bold">${t.get('profit',0):+,.0f}</td>
+            <td>{t.get('buy_date', '')}</td>
+            <td>{t.get('sell_date', '')}</td>
+            <td><strong style="color:{party_col}">{t.get('politician', '')}</strong></td>
+            <td><strong>{t.get('ticker', '')}</strong></td>
+            <td>{t.get('range', '')}</td>
+            <td>${t.get('buy_price', 0):,.2f}</td>
+            <td>${t.get('sell_price', 0):,.2f}</td>
+            <td style="color:{color};font-weight:bold">{t.get('gain_pct', 0):+.2f}%</td>
+            <td style="color:{color};font-weight:bold">${t.get('profit', 0):+,.0f}</td>
         </tr>"""
 
     win_rate = wins / len(closed) * 100 if closed else 0
@@ -577,8 +571,6 @@ def generate_webpage(portfolio):
         font-weight: 500; border-bottom: 1px solid #2a2a38; }}
   td {{ padding: 10px 12px; border-bottom: 1px solid #1e1e2a; }}
   tr:hover td {{ background: #1e1e2a; }}
-  .badge-dem  {{ color: #64b5f6; font-weight: 600; }}
-  .badge-rep  {{ color: #ef9a9a; font-weight: 600; }}
   .green {{ color: #4caf50; }}
   .red   {{ color: #f44336; }}
   .updated {{ color: #555; font-size: 12px; margin-top: 32px; text-align: center; }}
@@ -639,7 +631,7 @@ def generate_webpage(portfolio):
   </table>'''}
 </div>
 
-<p class="updated">Data via Capitol Trades · Prices via Yahoo Finance · 
+<p class="updated">Data via Capitol Trades · Prices via Yahoo Finance ·
    <a href="https://github.com" style="color:#555">GitHub</a></p>
 </body>
 </html>"""
