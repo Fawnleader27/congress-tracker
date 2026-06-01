@@ -1,6 +1,59 @@
 {
-  "positions": {},
+  "positions": {
+    "T_David Taylor_20260601": {
+      "key": "T_David Taylor_20260601",
+      "ticker": "T",
+      "politician": "David Taylor",
+      "party": "Republican",
+      "action": "Purchase",
+      "shares": 322.5806,
+      "buy_price": 24.8,
+      "amount": 8000,
+      "buy_date": "2026-06-01",
+      "range": "1K\u201315K",
+      "status": "open"
+    },
+    "HD_David Taylor_20260601": {
+      "key": "HD_David Taylor_20260601",
+      "ticker": "HD",
+      "politician": "David Taylor",
+      "party": "Republican",
+      "action": "Purchase",
+      "shares": 25.2255,
+      "buy_price": 317.14,
+      "amount": 8000,
+      "buy_date": "2026-06-01",
+      "range": "1K\u201315K",
+      "status": "open"
+    },
+    "MEDP_David Taylor_20260601": {
+      "key": "MEDP_David Taylor_20260601",
+      "ticker": "MEDP",
+      "politician": "David Taylor",
+      "party": "Republican",
+      "action": "Purchase",
+      "shares": 17.8927,
+      "buy_price": 447.11,
+      "amount": 8000,
+      "buy_date": "2026-06-01",
+      "range": "1K\u201315K",
+      "status": "open"
+    },
+    "PH_David Taylor_20260601": {
+      "key": "PH_David Taylor_20260601",
+      "ticker": "PH",
+      "politician": "David Taylor",
+      "party": "Republican",
+      "action": "Purchase",
+      "shares": 9.4716,
+      "buy_price": 844.63,
+      "amount": 8000,
+      "buy_date": "2026-06-01",
+      "range": "1K\u201315K",
+      "status": "open"
+    }
+  },
   "closed_trades": [],
-  "total_invested": 0,
-  "last_updated": "2026-05-25 12:53 UTC"
+  "total_invested": 64000,
+  "last_updated": "2026-06-01 00:01 UTC"
 }
