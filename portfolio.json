@@ -64,9 +64,22 @@
       "buy_date": "2026-06-01",
       "range": "1K\u201315K",
       "status": "open"
+    },
+    "ARLP_Virginia Foxx_20260603": {
+      "key": "ARLP_Virginia Foxx_20260603",
+      "ticker": "ARLP",
+      "politician": "Virginia Foxx",
+      "party": "Republican",
+      "action": "Purchase",
+      "shares": 311.5265,
+      "buy_price": 25.68,
+      "amount": 8000,
+      "buy_date": "2026-06-03",
+      "range": "1K\u201315K",
+      "status": "open"
     }
   },
   "closed_trades": [],
-  "total_invested": 72000,
-  "last_updated": "2026-06-02 22:06 UTC"
+  "total_invested": 80000,
+  "last_updated": "2026-06-03 16:04 UTC"
 }
