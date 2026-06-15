@@ -201,7 +201,7 @@ def scrape_latest_trades(max_pages=3):
                     })
             except:
                 continue
-        time.sleep(1.5)
+        time.sleep(3)
 
     if not records:
         return pd.DataFrame()
