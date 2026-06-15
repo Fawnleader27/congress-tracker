@@ -10,7 +10,18 @@ from bs4 import BeautifulSoup
 GMAIL_ADDRESS  = os.environ["GMAIL_ADDRESS"]
 GMAIL_APP_PWD  = os.environ["GMAIL_APP_PWD"]
 ALERT_EMAIL_TO = GMAIL_ADDRESS
-HEADERS        = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.5",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Connection": "keep-alive",
+    "Upgrade-Insecure-Requests": "1",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
+}
 
 PORTFOLIO_FILE = "portfolio.json"
 KNOWN_IDS_FILE = "known_ids.txt"
@@ -149,6 +160,8 @@ def scrape_latest_trades(max_pages=3):
     records = []
 
     for page in range(1, max_pages + 1):
+        wait = 5 if page == 1 else 3
+        time.sleep(wait)
         try:
             r = session.get(f"https://www.capitoltrades.com/trades?page={page}", timeout=15)
             r.raise_for_status()
